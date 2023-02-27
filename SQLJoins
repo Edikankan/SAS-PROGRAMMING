@@ -1,0 +1,130 @@
+%let path =/home/u62109636/my_shared_file_links/jhshows0/STA5067/SAS Data;
+libname orion "&path/orion";
+libname train "&path/train";
+*******************Question 1*****************;
+/*Use an Inner Join*/
+title1"Employees with More than 30 years of Service";
+title2"As of December 31, 2007";
+
+proc sql;
+	select Employee_Name, int(('31DEC2007'd - Employee_Hire_Date)/365.25) as YOS 
+		"Years of Service" from orion.employee_addresses inner join 
+		orion.employee_payroll on 
+		employee_addresses.employee_id=employee_payroll.employee_id where calculated 
+		YOS gt 30 order by employee_name;
+quit;
+
+title;
+*******************Question 2*****************;
+/*Use an Outer Join*/
+proc sql;
+	select employee_name "Name", city, job_title from orion.employee_addresses as 
+		ea left join orion.sales as s on ea.employee_id=s.employee_id order by 2, 3, 
+		1;
+quit;
+
+title;
+*******************Question 3*****************;
+/*Joining Multiple Tables*/
+title"US and Australian Internet Customers";
+title"Purchasing Foreign Manufactured Products";
+
+proc sql;
+	select customer_name 'Name', count(*) "Purchases" as count from orion.customer 
+		as c, orion.order_fact as of, orion.product_dim as pd where 
+		c.customer_id=of.customer_id and of.product_id=pd.product_id and 
+		Employee_ID=99999999 and pd.Supplier_Country ne Country and Country in ('US', 
+		'AU') group by Customer_Name order by Count desc, Customer_Name;
+quit;
+
+proc sql;
+	select customer_name 'Name', count(*) "Purchases" as count from orion.customer 
+		as c inner join orion.order_fact as of on c.customer_id=of.customer_id inner 
+		join orion.product_dim as pd on of.product_id=pd.product_id where 
+		Employee_ID=99999999 and pd.Supplier_Country ne Country and Country in ('US', 
+		'AU') group by 1 order by 2 desc, 1;
+quit;
+
+title;
+*******************Question 4*****************;
+/*Joining Multiple Tables*/
+title"Employees With More Than 30 years of Service";
+title2"As of December 31, 2007";
+
+proc sql;
+	select employee_name, int(('31DEC2007'd - Employee_Hire_Date)/365.25) as YOS 
+		"Years of Service", (SELECT Employee_Name FROM orion.Employee_Addresses WHERE 
+		Employee_ID=Manager_ID) "Manager Name" from orion.employee_addresses as ea, 
+		orion.employee_payroll as ep, orion.employee_organization as eo where 
+		ea.employee_id=ep.employee_id=eo.employee_id and calculated YOS gt 30 order 
+		by 3, 2 desc, 1;
+quit;
+
+proc sql;
+	select employee_name, int(('31DEC2007'd - Employee_Hire_Date)/365.25) as YOS 
+		"Years of Service", (SELECT Employee_Name FROM orion.Employee_Addresses WHERE 
+		Employee_ID=Manager_ID) "Manager Name" from orion.employee_addresses as ea 
+		inner join orion.employee_payroll as ep on ea.employee_id=ep.employee_id 
+		inner join orion.employee_organization as eo on ea.employee_id=eo.employee_id 
+		where calculated YOS gt 30 order by 3, 2 desc, 1;
+quit;
+
+title;
+*******************Question 5*****************;
+/*Using Inner Join*/
+title"US Employees";
+
+proc sql;
+	select employee_name, city, int(('31DEC2007'D - Birth_Date)/365.25) as Age, 
+		/*USING TODAY() TO CALCULATE AGE didn't print the report so i assumed it was
+		the date from all previous questions as the today's date*/
+		employee_gender from orion.employee_payroll as ep inner join 
+		orion.employee_addresses as ea on ep.employee_id=ea.employee_id where 
+		country="US" order by 3, 2, 1;
+quit;
+
+title;
+*******************Question 6*****************;
+/*Using an Inner Join*/
+title"New Jersey Employees";
+
+proc sql;
+	select substr(FirstName, 1, 1)||". "|| Lastname "name", JobCode, Gender from 
+		train.staffmaster as sm inner join train.payrollmaster as pm on 
+		sm.empid=pm.empid where state="NJ" order by 3, 2;
+quit;
+
+*******************Question 7*****************;
+/*Using Coalesce with Inner Join*/
+data t1 t2;
+	call streaminit(54321);
+
+	do id=1, 7, 4, 2, 6, 11, 9;
+		chol=int(rand("Normal", 240, 40));
+		sbp=int(rand("Normal", 120, 20));
+		output t1;
+	end;
+
+	do id1=2, 1, 5, 7, 3, 9;
+		chol=int(rand("Normal", 240, 40));
+		sbp=int(rand("Normal", 120, 20));
+		output t2;
+	end;
+run;
+
+title "t1";
+
+proc print data=t1 noobs;
+run;
+
+title "t2";
+
+proc print data=t2 noobs;
+run;
+
+title;
+
+proc sql;
+	select coalesce(t1.id, t2.id1) as id, t1.chol, t2.sbp from t1 inner join t2 on 
+		t1.id=t2.id1 order by 1;
+quit;
